@@ -27,9 +27,8 @@ def call(body) {
                             def clusterName = cluster.cluster_name
                             def serviceConfigs = cluster.services.collect { service -> getServiceConfig(service) }
                             def instanceType = getInstanceType(getLargestContainerMemory(serviceConfigs))
-
-                            print("Instance min: " + getInstanceMin(instanceType, serviceConfigs))
-                            print("Instance min: " + getInstanceMax(instanceType, serviceConfigs))
+                            def minInstances = getInstanceMin(instanceType, serviceConfigs)
+                            def maxInstances =  getInstanceMax(instanceType, serviceConfigs)
 
                             sh 'rm -rf terraform-repo'
                             dir('terraform-repo') {
@@ -51,6 +50,8 @@ def call(body) {
                                             USER_UNIQUE_NAME,
                                             clusterName,
                                             instanceType,
+                                            minInstances,
+                                            maxInstances,
                                             serviceConfigs,
                                             backendConfigPath
                                     )
@@ -116,19 +117,16 @@ int getInstanceMemoryCapacity(instanceType) {
 int divideAndCeil(numerator, denominator) {
     final pythonContent = libraryResource('divide_and_ceil.py')
     writeFile(file: 'divide_and_ceil.py', text: pythonContent)
-    result = sh (script: "python divide_and_ceil.py ${numerator} ${denominator}", returnStdout: true).trim()
-    print(result)
+    result = sh (script: "python divide_and_ceil.py ${numerator} ${denominator} | cut -d '.' -f 1", returnStdout: true).trim()
     return result.toInteger()
 }
 
 int getInstanceMin(instanceType, serviceConfigs) {
-    int totalMinContainers = getTotalMinContainers(serviceConfigs)
-    return divideAndCeil(totalMinContainers, containersPerInstance(instanceType, serviceConfigs)) + 1
+    return divideAndCeil(getTotalMinContainers(serviceConfigs), containersPerInstance(instanceType, serviceConfigs))
 }
 
 int getInstanceMax(instanceType, serviceConfigs) {
-    int totalMaxContainers = getTotalMaxContainers(serviceConfigs)
-    return divideAndCeil(totalMaxContainers, containersPerInstance(instanceType, serviceConfigs)) + 1
+    return divideAndCeil(getTotalMaxContainers(serviceConfigs), containersPerInstance(instanceType, serviceConfigs)) + 1
 }
 
 int containersPerInstance(instanceType, serviceConfigs) {
@@ -188,7 +186,7 @@ def populateBackendConfigFile(env, userUniqueName, clusterName) {
     return "${backendConfigPath}"
 }
 
-def populateTerraformTfvars(env, vpc, alb, userUniqueName, clusterName, instanceType, serviceConfigs, backendConfigPath) {
+def populateTerraformTfvars(env, vpc, alb, userUniqueName, clusterName, instanceType, minInstances, maxInstances, serviceConfigs, backendConfigPath) {
     varFile = "${backendConfigPath}/terraform.tfvars"
     vars = [
             terraformStringVar("env", env),
@@ -197,6 +195,8 @@ def populateTerraformTfvars(env, vpc, alb, userUniqueName, clusterName, instance
             terraformStringVar("unique_name", userUniqueName),
             terraformStringVar("cluster_name", clusterName),
             terraformStringVar("instance_type", instanceType),
+            terraformStringVar("min_instances", minInstances),
+            terraformStringVar("maxInstances", maxInstances),
             terraformListVar("service_names", serviceConfigs.collect { serviceConfig -> serviceConfig.name }),
             terraformListVar("service_contexts", serviceConfigs.collect { serviceConfig -> serviceConfig.context }),
             terraformListVar("service_health_checks", serviceConfigs.collect { serviceConfig -> serviceConfig.health_check }),
