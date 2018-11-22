@@ -7,6 +7,7 @@ def call(body) {
 
     USER_UNIQUE_NAME = config.user_unique_name
     GITHUB_USER_OR_ORG = config.github_user_or_org
+    MAPPING_FILE_PATH = config.mapping_file_path
 
     pipeline {
         agent any
@@ -19,7 +20,7 @@ def call(body) {
             stage("terraform-plan-and-apply") {
                 steps {
                     script {
-                        MAPPING = readYaml(file: "mapping.yaml")
+                        MAPPING = readYaml(file: "${MAPPING_FILE_PATH}")
                         ENV = MAPPING.env
                         VPC = MAPPING.vpc
                         ALB = MAPPING.alb
