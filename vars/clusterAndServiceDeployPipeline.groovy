@@ -116,7 +116,9 @@ int getInstanceMemoryCapacity(instanceType) {
 int divideAndCeil(numerator, denominator) {
     final pythonContent = libraryResource('divide_and_ceil.py')
     writeFile(file: 'divide_and_ceil.py', text: pythonContent)
-    return sh (script: "python divide_and_ceil.py ${numerator} ${denominator}", returnStdout: true).trim().toInteger()
+    result = sh (script: "python divide_and_ceil.py ${numerator} ${denominator}", returnStdout: true).trim()
+    print(result)
+    return result.toInteger()
 }
 
 int getInstanceMin(instanceType, serviceConfigs) {
