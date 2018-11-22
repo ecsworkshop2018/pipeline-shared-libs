@@ -28,6 +28,9 @@ def call(body) {
                             def serviceConfigs = cluster.services.collect { service -> getServiceConfig(service) }
                             def instanceType = getInstanceType(getLargestContainerMemory(serviceConfigs))
 
+                            print("Instance min: " + getInstanceMin(instanceType, serviceConfigs))
+                            print("Instance min: " + getInstanceMax(instanceType, serviceConfigs))
+
                             sh 'rm -rf terraform-repo'
                             dir('terraform-repo') {
                                 git url: "git@github.com:${GITHUB_USER_OR_ORG}/bifrost-infra-provisioner.git"
@@ -88,12 +91,76 @@ String getInstanceType(largestContainerMemory) {
     }
 }
 
+int getInstanceCpuCapacity(instanceType) {
+    switch(instanceType) {
+        case "t3.nano":
+            return 2048
+        case "t3.micro":
+            return 2048
+        default:
+            return 2048
+    }
+}
+
+int getInstanceMemoryCapacity(instanceType) {
+    switch(instanceType) {
+        case "t3.nano":
+            return 512
+        case "t3.micro":
+            return 1024
+        default:
+            return 2048
+    }
+}
+
+int ceil(numerator, denominator) {
+    final pythonContent = libraryResource('divide_and_ceil.py')
+    writeFile(file: 'divide_and_ceil.py', text: pythonContent)
+    return sh (script: "python divide_and_ceil.py ${numerator} ${denominator}", returnStdout: true).trim().toInteger()
+}
+
+int getInstanceMin(instanceType, serviceConfigs) {
+    int totalMinContainers = getTotalMinContainers(serviceConfigs)
+    return ceil(totalMinContainers.div(containersPerInstance(instanceType, serviceConfigs)) + 1)
+}
+
+int getInstanceMax(instanceType, serviceConfigs) {
+    int totalMaxContainers = getTotalMaxContainers(serviceConfigs)
+    return ceil(totalMaxContainers.div(containersPerInstance(instanceType, serviceConfigs))) + 1
+}
+
+int containersPerInstance(instanceType, serviceConfigs) {
+    int largestContainerMemory = getLargestContainerMemory(serviceConfigs)
+    int largestContainerCpu = getLargestContainerCpu(serviceConfigs)
+    int instanceMemory = getInstanceMemoryCapacity(instanceType)
+    int instanceCpu = getInstanceCpuCapacity(instanceType)
+    int containersPerInstanceMemory = instanceMemory.intdiv(largestContainerMemory)
+    int containersPerInstanceCpu = instanceCpu.intdiv(largestContainerCpu)
+    return containersPerInstanceCpu > containersPerInstanceMemory ? containersPerInstanceMemory : containersPerInstanceCpu
+}
+
+int getTotalMinContainers(serviceConfigs) {
+    return sum(serviceConfigs.collect { serviceConfig -> serviceConfig.min_instances })
+}
+
+int getTotalMaxContainers(serviceConfigs) {
+    return sum(serviceConfigs.collect { serviceConfig -> serviceConfig.max_instances })
+}
+
 int getLargestContainerMemory(serviceConfigs) {
     return max(serviceConfigs.collect { serviceConfig -> serviceConfig.memory })
 }
 
+int getLargestContainerCpu(serviceConfigs) {
+    return max(serviceConfigs.collect { serviceConfig -> serviceConfig.cpu })
+}
+
 int max(intList) {
     return intList.inject(0, { result, i -> result > i ? result : i })
+}
+
+int sum(intList) {
+    return intList.inject(0, { result, i -> result + i })
 }
 
 def getServiceConfig(service) {
