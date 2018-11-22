@@ -196,7 +196,7 @@ def populateTerraformTfvars(env, vpc, alb, userUniqueName, clusterName, instance
             terraformStringVar("cluster_name", clusterName),
             terraformStringVar("instance_type", instanceType),
             terraformStringVar("min_instances", minInstances),
-            terraformStringVar("maxInstances", maxInstances),
+            terraformStringVar("max_instances", maxInstances),
             terraformListVar("service_names", serviceConfigs.collect { serviceConfig -> serviceConfig.name }),
             terraformListVar("service_contexts", serviceConfigs.collect { serviceConfig -> serviceConfig.context }),
             terraformListVar("service_health_checks", serviceConfigs.collect { serviceConfig -> serviceConfig.health_check }),
