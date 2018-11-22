@@ -113,7 +113,7 @@ int getInstanceMemoryCapacity(instanceType) {
     }
 }
 
-int ceil(numerator, denominator) {
+int divideAndCeil(numerator, denominator) {
     final pythonContent = libraryResource('divide_and_ceil.py')
     writeFile(file: 'divide_and_ceil.py', text: pythonContent)
     return sh (script: "python divide_and_ceil.py ${numerator} ${denominator}", returnStdout: true).trim().toInteger()
@@ -121,12 +121,12 @@ int ceil(numerator, denominator) {
 
 int getInstanceMin(instanceType, serviceConfigs) {
     int totalMinContainers = getTotalMinContainers(serviceConfigs)
-    return ceil(totalMinContainers.div(containersPerInstance(instanceType, serviceConfigs)) + 1)
+    return divideAndCeil(totalMinContainers, containersPerInstance(instanceType, serviceConfigs)) + 1
 }
 
 int getInstanceMax(instanceType, serviceConfigs) {
     int totalMaxContainers = getTotalMaxContainers(serviceConfigs)
-    return ceil(totalMaxContainers.div(containersPerInstance(instanceType, serviceConfigs))) + 1
+    return divideAndCeil(totalMaxContainers, containersPerInstance(instanceType, serviceConfigs)) + 1
 }
 
 int containersPerInstance(instanceType, serviceConfigs) {
