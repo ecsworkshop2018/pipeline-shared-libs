@@ -149,11 +149,13 @@ int getTotalMaxContainers(serviceConfigs) {
 }
 
 int getLargestContainerMemory(serviceConfigs) {
-    return max(serviceConfigs.collect { serviceConfig -> serviceConfig.memory })
+    largestContainerMemory = max(serviceConfigs.collect { serviceConfig -> serviceConfig.memory })
+    return largestContainerMemory <= 0 ? 1 : largestContainerMemory
 }
 
 int getLargestContainerCpu(serviceConfigs) {
-    return max(serviceConfigs.collect { serviceConfig -> serviceConfig.cpu })
+    largestContainerCpu = max(serviceConfigs.collect { serviceConfig -> serviceConfig.cpu })
+    return largestContainerCpu <= 0 ? 1 : largestContainerCpu
 }
 
 int max(intList) {
