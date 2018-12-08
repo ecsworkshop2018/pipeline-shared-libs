@@ -25,7 +25,7 @@ def call(body) {
                         dir('terraform-repo') {
                             git url: "git@github.com:${GITHUB_USER_OR_ORG}/bifrost-infra-provisioner.git"
 
-                            dir('terraform/alb-and-dns') {
+                            dir('terraform/alb-with-dns') {
                                 def backendConfigPath = populateBackendConfigFile(
                                         ENV,
                                         USER_UNIQUE_NAME
