@@ -8,6 +8,7 @@ def call(body) {
     ENV = config.env
     VPC = config.vpc
     USER_UNIQUE_NAME = config.user_unique_name
+    GITHUB_USER_OR_ORG = config.github_user_or_org
 
     pipeline {
         agent any
