@@ -26,12 +26,9 @@ def call(body) {
                             git url: "git@github.com:${GITHUB_USER_OR_ORG}/bifrost-infra-provisioner.git"
 
                             dir('terraform/alb-and-dns') {
-                                setupPythonVirtualEnv()
-
                                 def backendConfigPath = populateBackendConfigFile(
                                         ENV,
-                                        USER_UNIQUE_NAME,
-                                        clusterName
+                                        USER_UNIQUE_NAME
                                 )
 
                                 populateTerraformTfvars(
@@ -55,23 +52,14 @@ def call(body) {
     }
 }
 
-def setupPythonVirtualEnv() {
-    sh """
-        virtualenv venv
-        . venv/bin/activate
-        pip install -r requirements.txt
-        deactivate
-       """
-}
-
-def populateBackendConfigFile(env, userUniqueName, clusterName) {
+def populateBackendConfigFile(env, userUniqueName) {
     stateBucket = "ecs-workshop-terraform-state-${env}"
-    backendConfigPath = "backend-configs/${env}-${userUniqueName}-${clusterName}"
+    backendConfigPath = "backend-configs/${env}-${userUniqueName}"
     sh "mkdir -p ${backendConfigPath}"
     backendConfigFile = "${backendConfigPath}/backend.config"
     backenConfigs = [
             terraformStringVar("bucket", stateBucket),
-            terraformStringVar("key", "${userUniqueName}-${clusterName}-cluster.tfstate")
+            terraformStringVar("key", "${userUniqueName}-${env}-cluster.tfstate")
     ]
     writeFile encoding: "UTF-8", file: "${backendConfigFile}", text: backenConfigs.join("\n")
     return "${backendConfigPath}"
@@ -94,12 +82,10 @@ def terraformStringVar(key, value) {
 def terraformPlan(backendConfigPath) {
     wrap([$class: 'AnsiColorBuildWrapper', 'colorMapName': 'xterm']) {
         sh """
-            . venv/bin/activate
             TF_IN_AUTOMATION=true 
             terraform get -update=true
             terraform init -input=false -backend-config=${backendConfigPath}/backend.config
             terraform plan -input=false -out=terraform.tfplan -var-file=${backendConfigPath}/terraform.tfvars
-            deactivate
            """
     }
 }
@@ -107,10 +93,8 @@ def terraformPlan(backendConfigPath) {
 def terraformApply() {
     wrap([$class: 'AnsiColorBuildWrapper', 'colorMapName': 'xterm']) {
         sh """
-            . venv/bin/activate
             TF_IN_AUTOMATION=true
             terraform apply -input=false terraform.tfplan
-            deactivate
            """
     }
 }
